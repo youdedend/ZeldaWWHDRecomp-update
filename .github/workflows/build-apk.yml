@@ -42,6 +42,10 @@ jobs:
 
       - name: Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # the action's default package list still contains the long-removed 'tools'
+          # package, which fails the install; platform-tools is all it needs to set up
+          packages: platform-tools
 
       - name: Install SDK packages
         run: sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
