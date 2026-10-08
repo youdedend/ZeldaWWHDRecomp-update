@@ -61,8 +61,11 @@ jobs:
           bash tools/android/build-llvm.sh
 
       - name: Release key from secrets (if present)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "No release key secrets; the APK will be signed with the debug key."
+            exit 0
+          fi
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/ci-release.keystore
           cat > android/keystore.properties <<EOF
           storeFile=ci-release.keystore
