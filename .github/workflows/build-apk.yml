@@ -57,7 +57,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/llvm
-          key: llvm-20.1.8-ndk27.2.12479018-${{ hashFiles('tools/android/build-llvm.sh') }}
+          # run_id in the key: cache entries are immutable, so a fixed key restores
+          # but never re-saves; this saves the finished LLVM build every run while
+          # still resuming from the previous run's cache
+          key: llvm-20.1.8-ndk27.2.12479018-${{ hashFiles('tools/android/build-llvm.sh') }}-${{ github.run_id }}
+          restore-keys: |
+            llvm-20.1.8-ndk27.2.12479018-${{ hashFiles('tools/android/build-llvm.sh') }}-
 
       - name: Build LLVM for Android
         run: |
