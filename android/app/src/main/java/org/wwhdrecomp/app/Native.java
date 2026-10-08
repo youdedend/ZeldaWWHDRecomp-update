@@ -73,13 +73,17 @@ final class Native {
     static native void setOption(String name, int value);
     static native int getOption(String name);
 
-    /** Save state slot 1..5: {used "1"/"0", compatible "1"/"0", time, area}. */
+    /** Save state slot 1..5: {used, compatible, time, area, controller, portable} ("1"/"0" flags). */
     static native String[] saveSlotInfo(int slot);
     /** Saved / loaded at the next frame boundary; the result shows in saveStateMessage(). */
     static native void saveState(int slot);
     static native void loadState(int slot);
     /** The latest save state result, "" when stale. */
     static native String saveStateMessage();
+    /** Portable state for a bug report (states/bugreport.wwstate), saved at the next frame boundary. */
+    static native void saveBugReportState();
+    /** {newest portable state path, cking.sav path} ("" parts if missing). */
+    static native String[] bugReportFiles();
     /** Frame generation settings; applied from the next frame on (the DLL is read again). */
     static native void applyFrameGen(boolean on, String dll, boolean quality, float flowScale, int multiplier, boolean uiDetection);
     /** Performance overlay: {game fps, frame time avg ms, worst ms, presented fps, frame generation GPU ms}. */

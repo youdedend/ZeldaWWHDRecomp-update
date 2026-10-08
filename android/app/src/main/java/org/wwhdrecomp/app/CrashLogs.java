@@ -161,8 +161,8 @@ final class CrashLogs {
     }
 
     // what a bug report needs besides the log (which names the GPU and driver): the app version and
-    // the device
-    private static String about(Context c) {
+    // the device (also the bug report save's text: BugReport)
+    static String about(Context c) {
         String version = "?";
         try {
             android.content.pm.PackageInfo pi = c.getPackageManager().getPackageInfo(c.getPackageName(), 0);

@@ -12,9 +12,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 
 /**
- * Hands the crash logs (CrashLogs) to the app the user shares them with: read only, one file per
- * content://org.wwhdrecomp.app.crashlogs/crash-YYYYmmdd-HHMMSS.log. Not exported; the share
- * intent grants the receiving app access to the URIs it carries.
+ * Hands the crash logs (CrashLogs) and the bug report saves (BugReport) to the app the user
+ * shares them with: read only, one file per content://org.wwhdrecomp.app.crashlogs/<name>. Not
+ * exported; the share intent grants the receiving app access to the URIs it carries. Only these
+ * exact names are served (no paths, no traversal): the crash logs from captures/, the portable
+ * states from states/, and the game save from save/user/.
  */
 public final class CrashLogProvider extends ContentProvider {
     static final String AUTHORITY = "org.wwhdrecomp.app.crashlogs";
@@ -23,10 +25,20 @@ public final class CrashLogProvider extends ContentProvider {
 
     private File file(Uri u) throws FileNotFoundException {
         String name = u.getLastPathSegment();
-        if (name == null || !CrashLogs.isLogName(name)) throw new FileNotFoundException(String.valueOf(u));
-        File f = new File(CrashLogs.dir(getContext()), name);
+        if (name == null) throw new FileNotFoundException(String.valueOf(u));
+        File base = baseDir();
+        File f;
+        if (CrashLogs.isLogName(name)) f = new File(CrashLogs.dir(getContext()), name);
+        else if (name.matches("slot[1-5]\\.wwstate|bugreport\\.wwstate")) f = new File(new File(base, "states"), name);
+        else if (name.equals("cking.sav")) f = new File(new File(base, "save/user"), name);
+        else throw new FileNotFoundException(name);
         if (!f.isFile()) throw new FileNotFoundException(name);
         return f;
+    }
+
+    private File baseDir() {
+        File f = getContext().getExternalFilesDir(null);
+        return f != null ? f : getContext().getFilesDir();
     }
 
     @Override

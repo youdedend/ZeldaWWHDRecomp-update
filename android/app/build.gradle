@@ -23,6 +23,8 @@ android {
             cmake {
                 targets 'wwhd', 'main_hook', 'hook_impl'  // + libadrenotools' hooks (custom GPU drivers)
                 arguments '-DANDROID_STL=c++_static'
+                // the build tag in portable save states and logs ("android-<versionName> (<git>)")
+                arguments "-DWWHD_APP_VERSION=${project.findProperty('wwhdVersionName') ?: '0.6'}"
                 // -PwwhdGenDir=<dir>: recompiled code somewhere other than build/gen
                 if (project.hasProperty('wwhdGenDir')) arguments "-DGEN_DIR=${project.property('wwhdGenDir')}"
                 // -PwwhdGenObjects=<dir>: game code from the LLVM recompiler's objects (testing)

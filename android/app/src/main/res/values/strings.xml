@@ -62,7 +62,7 @@
     <string name="backup_exporting">Exporting…</string>
     <string name="backup_exported">Exported to the folder \"%1$s\".</string>
     <string name="backup_scanning">Looking for saves…</string>
-    <string name="backup_nothing">No game save (cking.sav) or save states (slot1–5.bin) found in this folder.</string>
+    <string name="backup_nothing">No game save (cking.sav) or save states (slot1–5.bin/.wwstate) found in this folder.</string>
     <string name="backup_import_title">Import (replaces what is there)</string>
     <string name="backup_import_save">Game save (from %1$s)</string>
     <string name="backup_import_states">Save states: slot %1$s</string>
@@ -279,6 +279,24 @@
     <string name="menu_quit">Quit</string>
     <string name="on">on</string>
     <string name="off">off</string>
+    <string name="layout_title">Screen layout</string>
+    <string name="ao_title">Ambient occlusion</string>
+    <string name="text_title">Enter text</string>
+    <string name="text_message">Up to %1$d characters.</string>
+
+    <string-array name="layouts">
+        <item>TV with GamePad inset</item>
+        <item>TV and GamePad side by side</item>
+        <item>TV only</item>
+        <item>GamePad with TV inset</item>
+    </string-array>
+    <string-array name="ao_modes">
+        <item>Original (as on Wii U)</item>
+        <item>Centre fix</item>
+        <item>Centre + noise fix</item>
+    </string-array>
+</resources>
+name="off">off</string>
     <string name="layout_title">Screen layout</string>
     <string name="ao_title">Ambient occlusion</string>
     <string name="text_title">Enter text</string>

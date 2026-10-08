@@ -117,7 +117,8 @@ final class Backup {
     /**
      * Looks through the picked folder (a few levels deep): the game save is the first folder that
      * holds cking.sav (this app's save/user, or Cemu's .../user/80000001), with a "common" folder
-     * next to it if there is one; save states are slot1..5.bin and their .png pictures.
+     * next to it if there is one; save states are slot1..5.bin and their .png pictures, or portable
+     * slot1..5.wwstate (a slot loads its newer file of either kind).
      */
     static Found scan(ContentResolver cr, Uri tree) {
         Found f = new Found();
@@ -185,7 +186,7 @@ final class Backup {
             // a slot is its state and its picture: drop an old picture the import doesn't replace
             //noinspection ResultOfMethodCallIgnored
             new File(dir, "slot" + slot + ".png").delete();
-            for (String ext : new String[] {"bin", "png"}) {
+            for (String ext : new String[] {"bin", "png", "wwstate"}) {
                 Uri u = f.states.get("slot" + slot + "." + ext);
                 if (u == null) continue;
                 File tmp = new File(dir, "slot" + slot + "." + ext + ".importing");

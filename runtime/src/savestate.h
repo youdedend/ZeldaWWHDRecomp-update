@@ -60,13 +60,23 @@ constexpr int kSlots = 5;
 struct SlotInfo {
     bool used = false;
     bool compatible = true;
-    std::string when;  // local time of the save
-    std::string area;  // stage name, if known
+    bool portable = false;   // the slot's (newer) file is a portable state, not a full snapshot
+    std::string when;        // local time of the save
+    std::string area;        // stage name, if known
+    std::string path;        // the slot's file
+    bool older_other = false;  // the slot also holds an older file of the other kind (kept, never deleted)
+    uint64_t older_bytes = 0;
     int controller = 0;  // controls when saved: 0 unknown (older states), 1 GamePad, 2 Pro Controller
 };
 SlotInfo slot_info(int slot);           // 1..5
 void request_save(int slot);
-void request_load(int slot);
+void request_load(int slot);            // loads the slot's newer file: a full or a portable state
+// a portable state (portable_state.h: progress + position, no game data): slot 1..5, or slot 0 for
+// states/bugreport.wwstate. Refused while Link is not under the player's control (message says why).
+void request_save_portable(int slot);
+void request_load_portable_file(const std::string& path);  // a .wwstate anywhere
+// the newest portable state and cking.sav for a bug report ("wwstate|savs", empty parts if missing)
+std::string bug_report_paths();
 std::string last_message();             // short status for the title bar ("" when stale)
 
 // ---- game thread: call at the frame boundary (top of the per-frame function) ----

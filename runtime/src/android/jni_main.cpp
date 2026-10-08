@@ -483,21 +483,33 @@ JNI_FN(jint, getOption)(JNIEnv* env, jclass, jstring name) {
 }
 
 // ---- save states (runtime/src/savestate.cpp): 5 slots, saved and loaded at the next frame boundary
-// {used, compatible, time, area, controller ("", "gamepad" or "pro")} of slot 1..5
+// {used, compatible, time, area, controller ("", "gamepad" or "pro"), portable ("1"/"0")} of slot 1..5
 JNI_FN(jobjectArray, saveSlotInfo)(JNIEnv* env, jclass, jint slot) {
     ss::SlotInfo i = ss::slot_info(slot);
-    jobjectArray a = env->NewObjectArray(5, env->FindClass("java/lang/String"), nullptr);
+    jobjectArray a = env->NewObjectArray(6, env->FindClass("java/lang/String"), nullptr);
     env->SetObjectArrayElement(a, 0, env->NewStringUTF(i.used ? "1" : "0"));
     env->SetObjectArrayElement(a, 1, env->NewStringUTF(i.compatible ? "1" : "0"));
     env->SetObjectArrayElement(a, 2, env->NewStringUTF(i.when.c_str()));
     env->SetObjectArrayElement(a, 3, env->NewStringUTF(i.area.c_str()));
     env->SetObjectArrayElement(a, 4, env->NewStringUTF(i.controller == 2 ? "pro" : i.controller == 1 ? "gamepad" : ""));
+    env->SetObjectArrayElement(a, 5, env->NewStringUTF(i.portable ? "1" : "0"));
     return a;
 }
 JNI_FN(void, saveState)(JNIEnv*, jclass, jint slot) { ss::request_save(slot); }
 JNI_FN(void, loadState)(JNIEnv*, jclass, jint slot) { ss::request_load(slot); }
 // the latest save state result ("" when stale)
 JNI_FN(jstring, saveStateMessage)(JNIEnv* env, jclass) { return env->NewStringUTF(ss::last_message().c_str()); }
+// portable state for a bug report (states/bugreport.wwstate), saved at the next frame boundary
+JNI_FN(void, saveBugReportState)(JNIEnv*, jclass) { ss::request_save_portable(0); }
+// {newest portable state path, cking.sav path} ("" parts if missing)
+JNI_FN(jobjectArray, bugReportFiles)(JNIEnv* env, jclass) {
+    std::string both = ss::bug_report_paths();
+    size_t bar = both.find('|');
+    jobjectArray a = env->NewObjectArray(2, env->FindClass("java/lang/String"), nullptr);
+    env->SetObjectArrayElement(a, 0, env->NewStringUTF(both.substr(0, bar).c_str()));
+    env->SetObjectArrayElement(a, 1, env->NewStringUTF(bar == std::string::npos ? "" : both.substr(bar + 1).c_str()));
+    return a;
+}
 
 // frame generation settings changed in the menu: applied from the next frame on
 JNI_FN(void, applyFrameGen)(JNIEnv* env, jclass, jboolean on, jstring dll, jboolean quality, jfloat flowScale, jint multiplier,

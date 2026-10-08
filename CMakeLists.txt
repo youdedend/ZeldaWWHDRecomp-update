@@ -17,6 +17,16 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
+# build tag in portable save states and logs ("android-0.6 (a1b2c3d)"): the app version (Gradle
+# passes -DWWHD_APP_VERSION=<versionName>) and the git commit
+execute_process(COMMAND git -C ${CMAKE_SOURCE_DIR} rev-parse --short HEAD OUTPUT_VARIABLE WWHD_GIT_HASH
+                OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+if(NOT WWHD_GIT_HASH)
+  set(WWHD_GIT_HASH "unknown")
+endif()
+set(WWHD_APP_VERSION "0.6" CACHE STRING "app version in build tags")
+add_compile_definitions("WWHD_RUNTIME_VERSION=\"android-${WWHD_APP_VERSION} (${WWHD_GIT_HASH})\"")
+
 # The game code: either recompiled on the PC (tools/recomp/recomp.py -> build/gen, linked in), or,
 # for an APK without game code, recompiled on the device and loaded at startup (runtime/src/recomp)
 option(WWHD_DEVICE_RECOMP "Android: no build/gen; the app recompiles the game from the user's disc image" OFF)

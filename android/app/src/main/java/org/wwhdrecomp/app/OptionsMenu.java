@@ -398,6 +398,7 @@ final class OptionsMenu extends Dialog {
         }
         submenu(R.string.opt_export, R.string.opt_export_hint, "", a::chooseExport);
         submenu(R.string.opt_import, R.string.opt_import_hint, "", () -> a.pickFolder(MainActivity.PICK_IMPORT));
+        submenu(R.string.opt_bugreport, R.string.opt_bugreport_hint, "", () -> BugReport.share(a));
     }
 
     // a state is captured at the next frame boundary and written in the background (a few seconds
@@ -693,4 +694,6 @@ final class OptionsMenu extends Dialog {
     private Drawable slot(int fill, int stroke) { return GameUi.slot(getContext(), fill, stroke); }
 
     private static StateListDrawable states(Drawable normal, Drawable lit) { return GameUi.states(normal, lit); }
+}
+ates(Drawable normal, Drawable lit) { return GameUi.states(normal, lit); }
 }
