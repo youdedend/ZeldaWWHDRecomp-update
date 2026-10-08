@@ -60,7 +60,8 @@ static void image_shape(uint32_t dim, uint32_t slices, bool forRendering, VkImag
 
 // Rendering at a higher (or lower) resolution than the console: render targets with the screen's
 // 16:9 shape (the TV image and its post-processing chain, the GamePad image) are created this much
-// larger. Shadow maps and other square or array targets keep their size. Shaders still see guest
+// larger. Shadow maps and other square or array targets keep their size (WWHD_SHADOW_SCALE=n scales
+// the shadow maps). Shaders still see guest
 // units: viewports and scissors are scaled, and uf_fragCoordScale / uf_texNScale undo the scale.
 // The factor can change while the game runs (app setting): it is requested from any thread and
 // latched at the frame boundary; render targets made at another factor are reallocated when they
@@ -1098,6 +1099,24 @@ void copy_surface_impl(uint32_t srcAddr, uint32_t srcMip, uint32_t srcSlice, uin
     for (uint32_t y = 0; y < bh; y++)
         for (uint32_t x = 0; x < bw; x++) {
             uint32_t so = element_offset(si, stm, x, y, srcSlice, bpp, sswz, &sci);
+            uint32_t dofs = element_offset(di, dtm, x, y, dstSlice, bpp, dswz, &dci);
+            memcpy(mem::ptr(dbase + dofs), mem::ptr(sbase + so), f.bytesPerBlock);
+        }
+    // force re-upload of any texture made from the destination
+    auto dr = R.surfaces.equal_range(dbase);
+    for (auto it = dr.first; it != dr.second; ++it) it->second->lastCheckedFrame = ~0ull;
+}
+
+// a save state was loaded: every surface may differ from guest memory now
+void ss_reset_surfaces() {
+    for (auto& [a, s] : R.surfaces) {
+        s->dirty = true;
+        s->lastCheckedFrame = ~0ull;
+    }
+}
+
+}  // namespace gfx
+element_offset(si, stm, x, y, srcSlice, bpp, sswz, &sci);
             uint32_t dofs = element_offset(di, dtm, x, y, dstSlice, bpp, dswz, &dci);
             memcpy(mem::ptr(dbase + dofs), mem::ptr(sbase + so), f.bytesPerBlock);
         }

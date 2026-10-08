@@ -73,11 +73,19 @@ void latch_res_scale() {
     g_res_frame = g_res_requested.load(std::memory_order_relaxed);
 }
 
-// the factor a render target gets. Shadow maps (depth arrays: the game's cascades) can have their
-// own factor (WWHD_SHADOW_SCALE=n; default: the same as everything else).
+// the factor a render target gets. Shadow maps (depth arrays: the game's cascades) scale with the
+// internal resolution by default (sharper shadows). WWHD_SHADOW_FIX=1 keeps the console's 1024x1024
+// (issue #67: soft, steady shadow edges as on the console), and WWHD_SHADOW_SCALE=n gives them their
+// own factor (overrides both). The game softens shadow edges by sampling the map with bilinear depth
+// compare at a per-pixel random offset, then blurring the result on screen; on a finer map each
+// compare filters less wide, so edges come out harder and can shimmer.
 static float target_scale(const Surface* s) {
     if (s->fmt.compressed || s->mips > 1) return 1.0f;
-    static const float shadow = getenv("WWHD_SHADOW_SCALE") ? parse_scale(getenv("WWHD_SHADOW_SCALE")) : 0.0f;
+    static const float shadow = [] {
+        if (const char* e = getenv("WWHD_SHADOW_SCALE")) return parse_scale(e);
+        if (const char* e = getenv("WWHD_SHADOW_FIX")) return (*e && *e != '0') ? 1.0f : 0.0f;
+        return 0.0f;
+    }();
     if (shadow && s->isDepth && s->slices > 1) return shadow;
     return res_scale();
 }

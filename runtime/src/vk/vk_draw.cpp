@@ -10,6 +10,7 @@ extern "C" uint64_t g_draw_state_gen;    // gx2_core.cpp: bumped by any non-data
 #include "Cafe/HW/Latte/ISA/LatteReg.h"
 #include "Cafe/HW/Latte/ISA/RegDefines.h"
 #include "Cafe/HW/Latte/LegacyShaderDecompiler/LatteDecompiler.h"
+#include "gfx/area_sample.h"
 #include "gx2/gx2.h"
 #include "gx2/gx2_cmd.h"
 #include "platform.h"
@@ -2493,6 +2494,18 @@ bool headstart_translate(const uint32_t* regs, bool vertex, bool compileNow) {
 size_t headstart_compiling() { return std::max(0, g_compiles_in_flight.load()); }
 
 // Head-start pipeline records are in the macOS recipe format, which lacks the state Vulkan pipelines
+// need; their shaders are still pre-translated, and the pipelines get built on first use.
+bool headstart_queue_pipeline(const uint8_t*, size_t) { return false; }
+
+size_t headstart_build_pipelines(int maxInFlight, size_t& built, size_t& dropped) {
+    build_pending_pipelines(INT_MAX, maxInFlight);
+    built = g_recipes_built;
+    dropped = g_recipes_dropped;
+    return g_pending_pipelines.size();
+}
+
+}  // namespace gfx
+s are in the macOS recipe format, which lacks the state Vulkan pipelines
 // need; their shaders are still pre-translated, and the pipelines get built on first use.
 bool headstart_queue_pipeline(const uint8_t*, size_t) { return false; }
 
