@@ -27,7 +27,9 @@ The original project (macOS, the 60 fps modes, decompilation tools) is described
 - **An in-game options menu** in the style of the game's own menus, with tabs for saves, the game,
   graphics, mods and controls, usable by touch and with a controller (see below).
 - **Save states**: five slots with a picture, time and place of each state, and the controls it was
-  saved with (GamePad or Pro Controller), which loading it switches back to.
+  saved with (GamePad or Pro Controller), which loading it switches back to. The Saves tab also
+  shares a small portable state (Link's place and Quest Log progress, no game data) with the game
+  save for bug reports (`docs/portable-save-states.md`).
 - **Import and export** of the game save and the save states to a folder of your choice.
 - **Performance overlay**: frame rate with its average, frame time, CPU and GPU load, CPU, GPU and
   battery temperatures, the graphics settings in use, the SoC, GPU and GPU driver; you choose the
@@ -58,6 +60,8 @@ The original project (macOS, the 60 fps modes, decompilation tools) is described
   first person on R3, quick doors, fast scene changes.
 - **Faster running and swimming** (a new mod): Link runs and swims 1.25 up to 4 times as fast;
   everything else keeps its speed.
+- **Right-to-left text** for Arabic and Hebrew fan translations: replacing the game's 2D language
+  pack shapes and orders the text itself, no code patch needed (`docs/rtl-text.md`).
 - **Performance work for weaker devices**: BC textures unpacked on the GPU where it can't sample
   them (most Mali and PowerVR GPUs), precise Vulkan barriers (on a Mali-G52 the GPU time per frame
   drops from 52 to 40 ms), much less work on the render thread (on a Snapdragon 855 from 24 to 16 ms
