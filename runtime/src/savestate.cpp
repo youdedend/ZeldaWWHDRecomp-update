@@ -33,6 +33,7 @@
 #include <link.h>
 #include <zlib.h>  // blocks are deflated instead of LZ4 (states don't move between platforms)
 #endif
+#include <dirent.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -1040,7 +1041,13 @@ bool write_portable(const std::string& path, const pstate::State& s, std::string
     return ok;
 }
 
-struct PendingPortable { std::shared_ptr<pstate::State> s; int slot = 0; std::string path; };
+struct PendingPortable {
+    std::shared_ptr<pstate::State> s;
+    int slot = 0;
+    std::string path;
+    std::string label;  // file imports show their name instead of a slot label
+};
+std::string pload_label(const PendingPortable& p) { return p.label.empty() ? portable_label(p.slot) : p.label; }
 std::atomic<int> g_psave_req{0};
 PendingPortable g_pload;          // under g_mu
 bool g_pload_waiting = false;     // the "waiting for gameplay" message was shown
@@ -1100,21 +1107,21 @@ void service_portable_load(Cpu* c) {
     const int current_log = in_mem2(sv0) ? ld8(sv0 + kDataNum) : -1;
     if (!apply_portable(c, *p.s, why, retry)) {
         if (retry) {
-            if (!g_pload_waiting) message("%s: waiting to load (%s)", portable_label(p.slot).c_str(), why.c_str());
+            if (!g_pload_waiting) message("%s: waiting to load (%s)", pload_label(p).c_str(), why.c_str());
             g_pload_waiting = true;
             return;
         }
-        message("%s: cannot load (%s)", portable_label(p.slot).c_str(), why.c_str());
+        message("%s: cannot load (%s)", pload_label(p).c_str(), why.c_str());
     } else {
-        LOG("[savestate] %s: portable state applied: entering %s room %d layer %d at %.1f %.1f %.1f", portable_label(p.slot).c_str(),
+        LOG("[savestate] %s: portable state applied: entering %s room %d layer %d at %.1f %.1f %.1f", pload_label(p).c_str(),
             p.s->stage.c_str(), p.s->room, p.s->layer, p.s->pos[0], p.s->pos[1], p.s->pos[2]);
         if (current_log >= 0 && current_log <= 2 && current_log != p.s->file_slot) {
-            LOG("[savestate] %s: this state is from Quest Log %d; it is loaded into Quest Log %d", portable_label(p.slot).c_str(),
+            LOG("[savestate] %s: this state is from Quest Log %d; it is loaded into Quest Log %d", pload_label(p).c_str(),
                 p.s->file_slot + 1, current_log + 1);
             message("This state is from Quest Log %d; it is loaded into Quest Log %d (saving in game will write it there).",
                     p.s->file_slot + 1, current_log + 1);
         } else {
-            message("Loaded %s (%s; progress and position)", portable_label(p.slot).c_str(), area_label(p.s->stage.c_str()).c_str());
+            message("Loaded %s (%s; progress and position)", pload_label(p).c_str(), area_label(p.s->stage.c_str()).c_str());
         }
         g_arrival = Arrival{p.s->stage, {p.s->pos[0], p.s->pos[1], p.s->pos[2]}, gfx::frame_count(), ld32(ld32(kLinkPtr()) + 4), 0, p.s};
         std::lock_guard<std::mutex> lk(g_mu);
@@ -1272,6 +1279,60 @@ void request_load(int slot) {
     }).detach();
 }
 
+void request_save_portable(int slot) {
+    if (slot < 0 || slot > kSlots) return;
+    g_psave_req = slot + 1;  // 0 is no request; the game thread consumes it in service()
+}
+
+void request_load_portable_file(const std::string& path) {
+    // small enough (<= 64 KB) to read right here; the game thread applies it in service()
+    pstate::State s;
+    std::string why;
+    {
+        std::lock_guard<std::mutex> io(g_io);
+        if (!read_portable(path, s, why)) {
+            std::string name = path.substr(path.find_last_of("/\\") + 1);
+            message("%s: cannot load (%s)", name.c_str(), why.c_str());
+            return;
+        }
+    }
+    PendingPortable p{std::make_shared<pstate::State>(std::move(s)), 0, path};
+    p.label = path.substr(path.find_last_of("/\\") + 1);
+    std::lock_guard<std::mutex> lk(g_mu);
+    g_pload = std::move(p);
+    g_pload_waiting = false;
+}
+
+std::string bug_report_paths() {
+    // the newest portable state in the states folder (any run, not just this one)
+    const std::string ext = std::string(".") + pstate::kExtension;
+    std::string best;
+    time_t best_t = 0;
+    if (DIR* d = opendir(state_dir().c_str())) {
+        while (dirent* e = readdir(d)) {
+            std::string name = e->d_name;
+            if (name.size() <= ext.size() || name.compare(name.size() - ext.size(), ext.size(), ext) != 0) continue;
+            std::string full = state_dir() + "/" + name;
+            struct stat st{};
+            if (stat(full.c_str(), &st) == 0 && st.st_mtime >= best_t) {
+                best_t = st.st_mtime;
+                best = full;
+            }
+        }
+        closedir(d);
+    }
+    std::string sav;
+    for (const char* sub : {"user", "common"}) {
+        std::string p = config::save_dir + "/" + sub + "/cking.sav";
+        struct stat st{};
+        if (stat(p.c_str(), &st) == 0) {
+            sav = p;
+            break;
+        }
+    }
+    return best + "|" + sav;
+}
+
 std::string last_message() {
     std::lock_guard<std::mutex> lk(g_mu);
     if (g_message.empty() || std::chrono::steady_clock::now() - g_message_time > std::chrono::seconds(4)) return "";
@@ -1333,6 +1394,10 @@ void service(Cpu* c) {
         for (int k = 1; k <= dump; k++)
             gfx::request_tv_dump("state_load" + std::to_string(s->slot) + "_" + std::to_string(k) + ".png", k);
     }
+    // portable states (the bug-report flow, WWHD_PORTABLE_SAVE/LOAD): same frame boundary
+    if (int q = g_psave_req.exchange(0)) do_portable_save(c, q - 1);
+    service_portable_load(c);
+    watch_arrival(c);
 }
 
 }  // namespace ss
