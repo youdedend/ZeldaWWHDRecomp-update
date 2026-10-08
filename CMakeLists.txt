@@ -122,6 +122,11 @@ if(APPLE)
   add_executable(turbo_steps_test runtime/tools/turbo_steps_test.cpp)
   target_compile_options(turbo_steps_test PRIVATE -UNDEBUG)
 
+  # right-to-left text: shaping, bidi order and line layout on their own (runtime/src/rtl_text.h)
+  add_executable(rtl_text_test runtime/tools/rtl_text_test.cpp runtime/src/rtl_text.cpp)
+  target_include_directories(rtl_text_test PRIVATE runtime/src)
+  target_compile_options(rtl_text_test PRIVATE -UNDEBUG)
+
 elseif(ANDROID)
   # ---- Android: libwwhd.so, native GX2 on Vulkan; the Java activity in android/ loads it
   include(FetchContent)
@@ -231,10 +236,12 @@ wwhd_hooks:
     .incbin \"${HOOKS_DIR}/hooks_mods.txt\"
     .byte 10
     .incbin \"${HOOKS_DIR}/hooks_aspect.txt\"
+    .byte 10
+    .incbin \"${HOOKS_DIR}/hooks_rtl.txt\"
 wwhd_hooks_end:
 ")
     set_source_files_properties(${CMAKE_BINARY_DIR}/recomp_data.S PROPERTIES OBJECT_DEPENDS
-      "${OPS_BC};${HOOKS_DIR}/hooks.txt;${HOOKS_DIR}/hooks_climb.txt;${HOOKS_DIR}/hooks_mods.txt;${HOOKS_DIR}/hooks_aspect.txt;${HOOKS_DIR}/release_eur.txt;${HOOKS_DIR}/release_jpn.txt")
+      "${OPS_BC};${HOOKS_DIR}/hooks.txt;${HOOKS_DIR}/hooks_climb.txt;${HOOKS_DIR}/hooks_mods.txt;${HOOKS_DIR}/hooks_aspect.txt;${HOOKS_DIR}/hooks_rtl.txt;${HOOKS_DIR}/release_eur.txt;${HOOKS_DIR}/release_jpn.txt")
 
     if(WWHD_DEVICE_RECOMP)
       # The game code is linked at startup (loader.cpp). The game functions the runtime calls

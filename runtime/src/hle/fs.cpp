@@ -14,6 +14,7 @@
 #include <unordered_map>
 
 #include "../mem_writes.h"
+#include "../rtl_text.h"
 #include "../runtime.h"
 
 namespace {
@@ -129,6 +130,13 @@ int32_t open_file(const std::string& gpath, const std::string& mode, uint32_t ou
     FILE* f = fopen(hp.c_str(), m.c_str());
     TRACE("[fs] open %s (%s) -> %s", gpath.c_str(), mode.c_str(), f ? "ok" : "not found");
     if (!f) return FS_NOT_FOUND;
+    if (mode.find_first_of("wa+") == std::string::npos) {
+        // the 2D language pack the game opened (its own name, whatever release runs)
+        const size_t slash = gpath.find_last_of('/');
+        const std::string base = slash == std::string::npos ? gpath : gpath.substr(slash + 1);
+        if (base.size() > 18 && !base.compare(0, 13, "permanent_2d_") && !base.compare(base.size() - 5, 5, ".pack"))
+            rtl_text::language_pack_opened(hp);  // right-to-left text for an Arabic or Hebrew pack
+    }
     std::lock_guard<std::mutex> lk(g_fs_mutex);
     uint32_t h = g_next_handle++;
     g_files[h] = {f, gpath, m};
