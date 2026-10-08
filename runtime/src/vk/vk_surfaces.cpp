@@ -124,6 +124,35 @@ static void target_aspect(const Surface* s, float& ax, float& ay) {
     target_aspect_factors(s->width, s->height, ax, ay);
 }
 
+// ---------------------------------------------------------------- scaled copies without blits (upstream #72)
+// Vulkan makes depth/stencil blits optional, and some Adreno drivers have none (D16/D32 on the
+// Adreno 830, where an aspect-ratio or resolution change crashed the game). Upstream draws such
+// copies; this renderer has no temporary render-pass infrastructure at the copy sites, so an
+// unblittable scaled copy clears its destination instead (depth 1, stencil/colour 0): deterministic,
+// and the game re-renders depth every frame. Same-size copies use vkCmdCopyImage (exact). The first
+// format that takes the clear path logs one line. WWHD_VK_DEPTH_COPY=none forces the clear path
+// for depth (test aid).
+static bool depth_copy_none() {
+    static const bool v = [] {
+        const char* e = getenv("WWHD_VK_DEPTH_COPY");
+        return e && !strcmp(e, "none");
+    }();
+    return v;
+}
+static bool format_can_blit(VkFormat format) {
+    VkFormatProperties fp;
+    vkGetPhysicalDeviceFormatProperties(R.pd, format, &fp);
+    auto f = fp.optimalTilingFeatures;
+    return (f & VK_FORMAT_FEATURE_BLIT_SRC_BIT) && (f & VK_FORMAT_FEATURE_BLIT_DST_BIT);
+}
+static void log_cleared_copy(VkFormat format, const char* what) {
+    static std::vector<VkFormat> logged;  // render thread only, like the call sites
+    if (std::find(logged.begin(), logged.end(), format) == logged.end()) {
+        logged.push_back(format);
+        LOG("[gfx] Vulkan: format %d cannot be blitted on this device; %s are cleared instead", int(format), what);
+    }
+}
+
 Surface* rescaled(Surface* s) {
     if (!s || !s->img.image || s->img.type != VK_IMAGE_TYPE_2D || s->mips > 1 || !screen_shaped(s)) return s;
     float want = resolution_scale(), ax, ay;
