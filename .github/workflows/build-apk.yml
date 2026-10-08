@@ -21,14 +21,13 @@ on:
   push:
     branches: [main, master, port-0.2.8]
 
-env:
-  VERSION_NAME: ${{ inputs.versionName || '0.6' }}
-  VERSION_CODE: ${{ inputs.versionCode || '6' }}
-
 jobs:
   apk:
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    env:
+      VERSION_NAME: ${{ inputs.versionName || '0.6' }}
+      VERSION_CODE: ${{ inputs.versionCode || '6' }}
     steps:
       - uses: actions/checkout@v4
 
