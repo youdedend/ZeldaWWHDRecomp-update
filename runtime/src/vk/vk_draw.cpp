@@ -611,6 +611,7 @@ static Shader* get_shader_uncached(const uint32_t* regs, bool vertex, LatteFetch
     double t0 = now_ms();
     LatteShader_UpdatePSInputs((uint32*)regs);
     LatteDecompilerOptions opt;
+    if (!vertex) opt.areaSampledTextures = ::gfx::area_sample::units_for_pixel_shader(mem::ptr(addr), size);
     LatteDecompilerOutput_t out{};
     if (vertex)
         LatteDecompiler_DecompileVertexShader(base, (uint32*)regs, mem::ptr(addr), size, fs, opt, &out);
@@ -622,6 +623,15 @@ static Shader* get_shader_uncached(const uint32_t* regs, bool vertex, LatteFetch
         return s;
     }
     s->dec = FinishDecompiledShader(out);
+    if (opt.areaSampledTextures) {
+        std::string src = s->dec->strBuf_shaderSource->c_str();
+        if (::gfx::area_sample::rewrite(src, opt.areaSampledTextures, false) > 0) {
+            s->dec->strBuf_shaderSource->reset();
+            s->dec->strBuf_shaderSource->add(std::string_view(src));
+        } else {
+            LOG("[gfx] pixel shader %08X: area-sampled taps not applied", addr);
+        }
+    }
     create_set_layout(s);
     cache_record_shader(regs, vertex);
     g_t_decompile += now_ms() - t0;
@@ -2494,18 +2504,6 @@ bool headstart_translate(const uint32_t* regs, bool vertex, bool compileNow) {
 size_t headstart_compiling() { return std::max(0, g_compiles_in_flight.load()); }
 
 // Head-start pipeline records are in the macOS recipe format, which lacks the state Vulkan pipelines
-// need; their shaders are still pre-translated, and the pipelines get built on first use.
-bool headstart_queue_pipeline(const uint8_t*, size_t) { return false; }
-
-size_t headstart_build_pipelines(int maxInFlight, size_t& built, size_t& dropped) {
-    build_pending_pipelines(INT_MAX, maxInFlight);
-    built = g_recipes_built;
-    dropped = g_recipes_dropped;
-    return g_pending_pipelines.size();
-}
-
-}  // namespace gfx
-s are in the macOS recipe format, which lacks the state Vulkan pipelines
 // need; their shaders are still pre-translated, and the pipelines get built on first use.
 bool headstart_queue_pipeline(const uint8_t*, size_t) { return false; }
 

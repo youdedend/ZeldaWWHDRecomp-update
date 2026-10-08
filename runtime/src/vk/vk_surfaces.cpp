@@ -174,7 +174,7 @@ Surface* rescaled(Surface* s) {
     VkFormatProperties fp;
     vkGetPhysicalDeviceFormatProperties(R.pd, s->img.format, &fp);
     VkFormatFeatureFlags f = fp.optimalTilingFeatures;
-    if ((f & VK_FORMAT_FEATURE_BLIT_SRC_BIT) && (f & VK_FORMAT_FEATURE_BLIT_DST_BIT)) {
+    if ((f & VK_FORMAT_FEATURE_BLIT_SRC_BIT) && (f & VK_FORMAT_FEATURE_BLIT_DST_BIT) && !(s->fmt.depth && depth_copy_none())) {
         bool linear = !s->fmt.depth && (f & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT);
         prepare(old, Use::COPY_SRC);
         prepare(s->img, Use::COPY_DST);
@@ -185,6 +185,21 @@ Surface* rescaled(Surface* s) {
         b.dstOffsets[1] = {(int32_t)s->img.width, (int32_t)s->img.height, 1};
         vkCmdBlitImage(command_buffer(), old.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, s->img.image,
                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &b, linear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST);
+    } else {
+        // the GPU can't blit this format (depth on some Adreno drivers, upstream #72): clear the
+        // new image instead of leaving it undefined (depth 1, stencil/color 0)
+        log_cleared_copy(s->img.format, "rescaled surfaces");
+        prepare(s->img, Use::COPY_DST);
+        if (s->isDepth) {
+            VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT | (s->fmt.stencil ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
+            VkClearDepthStencilValue v{1.0f, 0};
+            VkImageSubresourceRange range{aspect, 0, 1, 0, 1};
+            vkCmdClearDepthStencilImage(command_buffer(), s->img.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &v, 1, &range);
+        } else {
+            VkClearColorValue v{};
+            VkImageSubresourceRange range{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+            vkCmdClearColorImage(command_buffer(), s->img.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &v, 1, &range);
+        }
     }
     retire_image(old);
     if (Surface* c = s->feedbackCopy) {  // recreated at the new size when next needed
@@ -220,6 +235,15 @@ bool create_surface_image(Surface* s, bool forRendering) {
         s->rscale = resolution_scale();
         w = std::max<uint32_t>(1, (uint32_t)lroundf(s->width * s->rscale * s->ax));
         h = std::max<uint32_t>(1, (uint32_t)lroundf(s->height * s->rscale * s->ay));
+    }
+    // shadow maps (depth arrays: the game's cascades) keep the console's 1024x1024, the soft steady
+    // edges of upstream's WWHD_SHADOW_FIX=1 (issue #67); WWHD_SHADOW_SCALE=n scales them instead
+    // (sharper edges that can shimmer, as upstream's default; restart to apply)
+    static const float shadow = getenv("WWHD_SHADOW_SCALE") ? clamp_scale((float)atof(getenv("WWHD_SHADOW_SCALE"))) : 0.0f;
+    if (shadow && forRendering && type == VK_IMAGE_TYPE_2D && s->fmt.depth && !s->fmt.compressed && s->mips == 1 && s->slices > 1) {
+        s->rscale = shadow;
+        w = std::max<uint32_t>(1, (uint32_t)lroundf(s->width * shadow));
+        h = std::max<uint32_t>(1, (uint32_t)lroundf(s->height * shadow));
     }
     // a mip chain can't be longer than the size allows
     uint32_t maxMips = 1;
@@ -1071,13 +1095,31 @@ void copy_surface_impl(uint32_t srcAddr, uint32_t srcMip, uint32_t srcSlice, uin
             vkCmdCopyImage(command_buffer(), src->img.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst->img.image,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &c);
         } else {  // different resolution scales: scale while copying
-            VkImageBlit b{};
-            b.srcSubresource = {src->img.aspect, 0, srcSlice, 1};
-            b.dstSubresource = {dst->img.aspect, 0, dstSlice, 1};
-            b.srcOffsets[1] = {(int32_t)src->img.width, (int32_t)src->img.height, 1};
-            b.dstOffsets[1] = {(int32_t)dst->img.width, (int32_t)dst->img.height, 1};
-            vkCmdBlitImage(command_buffer(), src->img.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst->img.image,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &b, src->isDepth ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
+            // the GPU can't blit every format (depth on some Adreno drivers, upstream #72): clear
+            // the slice instead of an invalid blit (depth 1, stencil/color 0; the game re-renders
+            // depth every frame)
+            VkFormat format = src->img.format;
+            if (format_can_blit(format) && !(dst->isDepth && depth_copy_none())) {
+                VkImageBlit b{};
+                b.srcSubresource = {src->img.aspect, 0, srcSlice, 1};
+                b.dstSubresource = {dst->img.aspect, 0, dstSlice, 1};
+                b.srcOffsets[1] = {(int32_t)src->img.width, (int32_t)src->img.height, 1};
+                b.dstOffsets[1] = {(int32_t)dst->img.width, (int32_t)dst->img.height, 1};
+                vkCmdBlitImage(command_buffer(), src->img.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst->img.image,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &b, src->isDepth ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
+            } else {
+                log_cleared_copy(format, "scaled copies");
+                if (dst->isDepth) {
+                    VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT | (dst->fmt.stencil ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
+                    VkClearDepthStencilValue v{1.0f, 0};
+                    VkImageSubresourceRange range{aspect, 0, 1, dstSlice, 1};
+                    vkCmdClearDepthStencilImage(command_buffer(), dst->img.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &v, 1, &range);
+                } else {
+                    VkClearColorValue v{};
+                    VkImageSubresourceRange range{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, dstSlice, 1};
+                    vkCmdClearColorImage(command_buffer(), dst->img.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &v, 1, &range);
+                }
+            }
         }
         mark_gpu_written(dst);
         return;
@@ -1099,24 +1141,6 @@ void copy_surface_impl(uint32_t srcAddr, uint32_t srcMip, uint32_t srcSlice, uin
     for (uint32_t y = 0; y < bh; y++)
         for (uint32_t x = 0; x < bw; x++) {
             uint32_t so = element_offset(si, stm, x, y, srcSlice, bpp, sswz, &sci);
-            uint32_t dofs = element_offset(di, dtm, x, y, dstSlice, bpp, dswz, &dci);
-            memcpy(mem::ptr(dbase + dofs), mem::ptr(sbase + so), f.bytesPerBlock);
-        }
-    // force re-upload of any texture made from the destination
-    auto dr = R.surfaces.equal_range(dbase);
-    for (auto it = dr.first; it != dr.second; ++it) it->second->lastCheckedFrame = ~0ull;
-}
-
-// a save state was loaded: every surface may differ from guest memory now
-void ss_reset_surfaces() {
-    for (auto& [a, s] : R.surfaces) {
-        s->dirty = true;
-        s->lastCheckedFrame = ~0ull;
-    }
-}
-
-}  // namespace gfx
-element_offset(si, stm, x, y, srcSlice, bpp, sswz, &sci);
             uint32_t dofs = element_offset(di, dtm, x, y, dstSlice, bpp, dswz, &dci);
             memcpy(mem::ptr(dbase + dofs), mem::ptr(sbase + so), f.bytesPerBlock);
         }

@@ -695,5 +695,3 @@ final class OptionsMenu extends Dialog {
 
     private static StateListDrawable states(Drawable normal, Drawable lit) { return GameUi.states(normal, lit); }
 }
-ates(Drawable normal, Drawable lit) { return GameUi.states(normal, lit); }
-}

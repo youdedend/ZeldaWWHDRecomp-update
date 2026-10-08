@@ -24,4 +24,11 @@ struct Vpad {
 // false if there are no recent samples (the caller writes the resting values)
 bool vpad(Vpad& out);
 
+// mods/camera.cpp, once per logic step: the game aims now (first person or an item aim)
+// VPADRead / KPADReadEx, each fresh read: the right stick the game aims with (GamePad or Pro
+// Controller). The game ignores the gyro while it is outside its 0.1 dead zone; a diagnostic
+// says so after 2 s (stick drift)
+void set_aiming(bool aiming);
+void right_stick(float x, float y);
+
 }  // namespace motion

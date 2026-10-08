@@ -22,8 +22,10 @@
 // Both act on full logic passes only (not on the 60 fps in-between passes) and in all 60 fps modes.
 #include <atomic>
 #include <cstdlib>
+#include <cstring>
 
 #include "mods.h"
+#include "turbo_steps.h"
 #include "runtime.h"
 #include "../release.h"
 
@@ -145,7 +147,7 @@ void call(Cpu* c, void (*f)(Cpu*), uint32_t r3) {
 // function is FN for deletion (fopAcM_delete) right after the first logic step of each door event,
 // as an actor deleting itself in that step would (a rat going into its hole, a pot breaking, Tingle
 // leaving). FN=list traces the actors (execute function, position) instead.
-constexpr uint32_t kActorQueue = 0x101F3328;  // g_fopAcTg_Queue (fopAcIt_Executor 025D51DC)
+const release::Data kActorQueue{0x101F3328};  // g_fopAcTg_Queue (fopAcIt_Executor 025D51DC)
 uint32_t actor_execute(uint32_t a) {
     uint32_t sub = ld32(a + 0xF0);  // fopAc_ac_c::sub_method (true60.cpp kSubMethod)
     return sub >= 0x10000000 && sub < 0x50000000 ? ld32(sub + 8) : 0;

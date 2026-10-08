@@ -140,6 +140,12 @@
     <string name="opt_export_hint">Copy your game save and save states to a folder</string>
     <string name="opt_import">Import saves</string>
     <string name="opt_import_hint">Restore them from a folder; an imported game save restarts the game</string>
+    <string name="opt_bugreport">Copy save for bug report</string>
+    <string name="opt_bugreport_hint">Save where Link stands and share it with your game save</string>
+    <string name="bugreport_saved">Bug report state saved</string>
+    <string name="bugreport_missing">Nothing to share: the bug report state and the game save are both missing.</string>
+    <string name="bugreport_share">Share bug report saves</string>
+    <string name="bugreport_subject">Wind Waker HD bug report saves</string>
     <string name="opt_graphics">Graphics</string>
     <string name="opt_mods">Mods</string>
     <string name="opt_controls">Controls</string>
@@ -279,24 +285,6 @@
     <string name="menu_quit">Quit</string>
     <string name="on">on</string>
     <string name="off">off</string>
-    <string name="layout_title">Screen layout</string>
-    <string name="ao_title">Ambient occlusion</string>
-    <string name="text_title">Enter text</string>
-    <string name="text_message">Up to %1$d characters.</string>
-
-    <string-array name="layouts">
-        <item>TV with GamePad inset</item>
-        <item>TV and GamePad side by side</item>
-        <item>TV only</item>
-        <item>GamePad with TV inset</item>
-    </string-array>
-    <string-array name="ao_modes">
-        <item>Original (as on Wii U)</item>
-        <item>Centre fix</item>
-        <item>Centre + noise fix</item>
-    </string-array>
-</resources>
-name="off">off</string>
     <string name="layout_title">Screen layout</string>
     <string name="ao_title">Ambient occlusion</string>
     <string name="text_title">Enter text</string>
