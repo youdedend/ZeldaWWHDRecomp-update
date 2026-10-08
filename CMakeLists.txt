@@ -118,6 +118,10 @@ if(APPLE)
   add_executable(input_map_test runtime/tools/input_map_test.cpp runtime/src/input_map.cpp)
   target_include_directories(input_map_test PRIVATE runtime/src)
 
+  # quick doors: extra logic steps against the game's process deletion (runtime/src/mods/turbo_steps.h)
+  add_executable(turbo_steps_test runtime/tools/turbo_steps_test.cpp)
+  target_compile_options(turbo_steps_test PRIVATE -UNDEBUG)
+
 elseif(ANDROID)
   # ---- Android: libwwhd.so, native GX2 on Vulkan; the Java activity in android/ loads it
   include(FetchContent)
