@@ -59,11 +59,13 @@ final class OptionsMenu extends Dialog {
     private final TextView[] tabs = new TextView[TABS];
 
     private String languageAtOpen;  // the game language when the menu opened: a change asks for a restart on closing
+    private boolean arabicAtOpen;  // the Arabic setting when the menu opened: a change asks for a restart on closing
 
     OptionsMenu(MainActivity a) {
         super(a, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen);
         this.a = a;
         languageAtOpen = a.gameLanguage();
+        arabicAtOpen = a.prefs.getBoolean("arabic", true);
         dp = a.getResources().getDisplayMetrics().density;
         tab = lastTab;
     }
@@ -320,6 +322,10 @@ final class OptionsMenu extends Dialog {
             languageAtOpen = a.gameLanguage();
             a.askRestartForLanguage();
         }
+        if (a.prefs.getBoolean("arabic", true) != arabicAtOpen) {
+            arabicAtOpen = a.prefs.getBoolean("arabic", true);
+            a.askRestartForArabic();
+        }
         rows.removeCallbacks(selectHeld);
         super.dismiss();
     }
@@ -482,6 +488,8 @@ final class OptionsMenu extends Dialog {
             if (MainActivity.LANGUAGES[langs[i]].equals(a.gameLanguage())) curLang = i;
         }
         choice(R.string.opt_language, R.string.opt_language_hint, names, curLang, i -> a.setGameLanguage(MainActivity.LANGUAGES[langs[i]]));
+        toggle(R.string.opt_arabic, R.string.opt_arabic_hint, a.prefs.getBoolean("arabic", true), a::setArabic);
+        submenu(R.string.opt_arabic_import, R.string.opt_arabic_import_hint, a.arabicLabel(), a::pickArabic);
     }
 
     private void mods() {

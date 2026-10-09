@@ -1,11 +1,13 @@
 # Right-to-left text (Arabic, Hebrew)
 
-Fan translations into right-to-left languages work by replacing the game's 2D language pack:
-put the translation's `permanent_2d_*.pack` (and its title logo if it has one) over the same
-file in the extracted game (`content/Common/Pack/`), keeping the game's file name, and restart.
-A Cemu code patch that ships with such a translation is not needed and not used: the port shapes
-and orders the text itself. (There is no mod manager in this port; the pack is matched by its
-name, whatever the game's region.)
+Fan translations into right-to-left languages work by replacing the game's 2D language pack.
+On Android the menu does it: Game > Import Arabic files (pick the translation's .zip) unpacks
+its `permanent_2d_*.pack` and `Title_00.szs`, and Game > Arabic translation switches them on
+after a restart. On desktop drop the two files into the `arabic` folder next to the save
+(`WWHD_ARABIC_DIR` overrides the folder) and restart. Either way the game loads the folder's
+pack whatever language it runs in, and the dump's own files stay untouched. A Cemu code patch
+that ships with such a translation is not needed and not used: the port shapes and orders the
+text itself.
 
 ## When it is on
 

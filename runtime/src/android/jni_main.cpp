@@ -267,6 +267,7 @@ extern "C" const char wwhd_ops_bc[], wwhd_ops_bc_end[], wwhd_hooks[], wwhd_hooks
 #include "../recomp/loader.h"
 #include "../aspect.h"
 #endif
+#include "../hle/fs.h"
 
 static std::atomic<size_t> g_compile_done{0}, g_compile_total{0};
 static std::atomic<bool> g_compile_cancel{false};
@@ -459,6 +460,7 @@ JNI_FN(void, setOption)(JNIEnv* env, jclass, jstring name, jint value) {
     else if (n == "mod_run_mode") mods::set_run_mode(value);
     else if (n == "mod_swim_mode") mods::set_swim_mode(value);
     else if (n == "mod_swim_speed") mods::set_swim_speed(value / 100.0f);
+    else if (n == "arabic") arabic::set_enabled(value != 0);
 }
 
 JNI_FN(jint, getOption)(JNIEnv* env, jclass, jstring name) {
@@ -479,6 +481,8 @@ JNI_FN(jint, getOption)(JNIEnv* env, jclass, jstring name) {
     if (n == "mod_run_mode") return mods::run_mode();
     if (n == "mod_swim_mode") return mods::swim_mode();
     if (n == "mod_swim_speed") return (int)lroundf(mods::swim_speed() * 100);
+    if (n == "arabic") return arabic::enabled();
+    if (n == "arabic_ready") return arabic::ready();
     return 0;
 }
 

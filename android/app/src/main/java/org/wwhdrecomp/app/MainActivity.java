@@ -126,6 +126,13 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
                 .button(R.string.res_restart_now, this::restartApp).show();
     }
 
+    /** after the options menu closed with another Arabic setting than it opened with */
+    void askRestartForArabic() {
+        new GameDialog(this).title(R.string.opt_arabic).message(R.string.arabic_restart)
+                .button(R.string.gpu_driver_later, null)
+                .button(R.string.res_restart_now, this::restartApp).show();
+    }
+
     File baseDir() {
         File f = getExternalFilesDir(null);
         return f != null ? f : getFilesDir();
@@ -247,6 +254,7 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
     // next start on. Returns the name of a driver that failed at its last start (then the system
     // driver runs and the choice is reset), else null.
     private static final int PICK_DRIVER = 5;
+    private static final int PICK_ARABIC = 6;
 
     private String applyGpuDriver() {
         if (!GpuDrivers.supported()) return null;
@@ -336,6 +344,26 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
                         prefs.edit().putString("gpu_driver", res).commit();
                         restartApp();
                     }).show();
+        });
+    }
+
+    void pickArabic() {
+        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType("*/*");
+        startActivityForResult(i, PICK_ARABIC);
+    }
+
+    private void installArabic(android.net.Uri uri) {
+        withProgress(R.string.arabic_installing, () -> Arabic.install(this, uri), res -> {
+            if (res.startsWith("!")) {
+                new GameDialog(this).title(R.string.opt_arabic_import).message(getString(R.string.arabic_install_failed, res.substring(1)))
+                        .button(R.string.opt_ok, null).show();
+                return;
+            }
+            new GameDialog(this).title(R.string.opt_arabic_import).message(getString(R.string.arabic_installed_restart, res))
+                    .button(R.string.gpu_driver_later, null)
+                    .button(R.string.res_restart_now, this::restartApp).show();
         });
     }
 
@@ -448,6 +476,7 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
         Native.setOption("pro_controller", prefs.getBoolean("pro_controller", Native.getOption("pro_controller") != 0) ? 1 : 0);
         Native.setOption("tv_aspect", prefs.getInt("tv_aspect", 0));
         Native.setOption("render_aspect", prefs.getInt("render_aspect", 0));
+        Native.setOption("arabic", prefs.getBoolean("arabic", true) ? 1 : 0);
         for (String m : MODS) Native.setOption(m, prefs.getBoolean(m, false) ? 1 : 0);
         Native.setOption("mod_camera_speed", prefs.getInt("mod_camera_speed", 100));
         Native.setOption("mod_run_speed", prefs.getInt("mod_run_speed", 100));
@@ -888,6 +917,23 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
         prefs.edit().putBoolean(key, on).apply();
         Native.setOption(key, on ? 1 : 0);
         if (key.equals("mod_climb")) controls.setClimbHud(on);
+    }
+
+    void setArabic(boolean on) {
+        prefs.edit().putBoolean("arabic", on).apply();
+        Native.setOption("arabic", on ? 1 : 0);
+        if (on && Native.getOption("arabic_ready") == 0)
+            new GameDialog(this).title(R.string.opt_arabic).message(R.string.arabic_no_files)
+                    .button(R.string.gpu_driver_later, null)
+                    .button(R.string.arabic_import_now, this::pickArabic).show();
+    }
+
+    String arabicLabel() {
+        switch (Native.getOption("arabic_ready")) {
+            case 3: return getString(R.string.arabic_installed);
+            case 0: return getString(R.string.arabic_none);
+            default: return getString(R.string.arabic_partial);
+        }
     }
 
     void setControlsVisible(boolean on) {
@@ -1401,6 +1447,10 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
         super.onActivityResult(request, result, data);
         if (request == PICK_DRIVER && result == RESULT_OK && data != null && data.getData() != null) {
             installDriver(data.getData());
+            return;
+        }
+        if (request == PICK_ARABIC && result == RESULT_OK && data != null && data.getData() != null) {
+            installArabic(data.getData());
             return;
         }
         if (request == PICK_DISC && result == RESULT_OK && data != null && data.getData() != null) {

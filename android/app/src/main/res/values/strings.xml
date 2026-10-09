@@ -301,4 +301,20 @@
         <item>Centre fix</item>
         <item>Centre + noise fix</item>
     </string-array>
+    <string name="opt_arabic">Arabic translation</string>
+    <string name="opt_arabic_hint">Hesham\'s Arabic translation, once imported below; applies after a restart</string>
+    <string name="opt_arabic_import">Import Arabic files…</string>
+    <string name="opt_arabic_import_hint">Unpacks the translation\'s .zip: the Arabic game text and title logo</string>
+    <string name="arabic_restart">The game uses the Arabic translation after a restart.</string>
+    <string name="arabic_none">Not installed</string>
+    <string name="arabic_partial">Incomplete</string>
+    <string name="arabic_installed">Installed</string>
+    <string name="arabic_installing">Installing the Arabic files…</string>
+    <string name="arabic_install_failed">The Arabic files couldn\'t be installed: %1$s</string>
+    <string name="arabic_not_package">this is not a translation package (a .zip with permanent_2d_*.pack)</string>
+    <string name="arabic_no_files">No Arabic files are imported yet. Import the translation\'s .zip now?</string>
+    <string name="arabic_import_now">Import…</string>
+    <string name="arabic_both">the game text and the title logo</string>
+    <string name="arabic_text_only">the game text (the archive has no title logo)</string>
+    <string name="arabic_installed_restart">Installed %1$s.\nThe game uses it after a restart.</string>
 </resources>

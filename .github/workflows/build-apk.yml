@@ -26,8 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     env:
-      VERSION_NAME: ${{ inputs.versionName || '0.6' }}
-      VERSION_CODE: ${{ inputs.versionCode || '6' }}
+      VERSION_NAME: ${{ inputs.versionName || '0.7' }}
+      VERSION_CODE: ${{ inputs.versionCode || '7' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -102,5 +102,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wwhd-${{ env.VERSION_NAME }}-libwwhd.so
-          path: build/android-cxx/.cxx/**/arm64-v8a/libwwhd.so
+          path: android/app/build/intermediates/cxx/Release/*/obj/arm64-v8a/libwwhd.so
           if-no-files-found: warn

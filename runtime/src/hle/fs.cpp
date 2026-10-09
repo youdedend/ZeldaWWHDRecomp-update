@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <strings.h>
 #include <mutex>
@@ -16,6 +17,62 @@
 #include "../mem_writes.h"
 #include "../rtl_text.h"
 #include "../runtime.h"
+#include "fs.h"
+
+namespace arabic {
+
+bool g_enabled = true;
+
+std::string dir() {
+    if (const char* e = getenv("WWHD_ARABIC_DIR")) return e;
+    const std::string& s = config::save_dir;
+    size_t slash = s.find_last_of('/');
+    return (slash == std::string::npos ? s : s.substr(0, slash)) + "/arabic";
+}
+
+// the translation's 2D pack, whatever language file name it carries
+std::string pack() {
+    std::string d = dir();
+    DIR* dp = opendir(d.c_str());
+    if (!dp) return "";
+    std::string found;
+    while (dirent* e = readdir(dp)) {
+        std::string n = e->d_name;
+        if (n.size() > 18 && !n.compare(0, 13, "permanent_2d_") && !n.compare(n.size() - 5, 5, ".pack")) {
+            found = d + "/" + n;
+            break;
+        }
+    }
+    closedir(dp);
+    return found;
+}
+
+int ready() {
+    struct stat st;
+    return (pack().empty() ? 0 : 1) | (stat((dir() + "/Title_00.szs").c_str(), &st) == 0 ? 2 : 0);
+}
+
+void set_enabled(bool on) { g_enabled = on; }
+bool enabled() { return g_enabled; }
+
+// the override for a guest path the game reads, or "" for the game dump's own file. The pack the
+// game asks for (its region's and language's name) is answered with the translation's pack, so the
+// setting works whatever the game's language is.
+std::string redirect(const std::string& guest) {
+    if (!g_enabled) return "";
+    size_t slash = guest.find_last_of('/');
+    std::string base = slash == std::string::npos ? guest : guest.substr(slash + 1);
+    if (base.size() > 18 && !base.compare(0, 13, "permanent_2d_") && !base.compare(base.size() - 5, 5, ".pack"))
+        return pack();
+    if (base == "Title_00.szs") {
+        std::string t = dir() + "/Title_00.szs";
+        struct stat st;
+        if (stat(t.c_str(), &st) == 0) return t;
+    }
+    return "";
+}
+
+}  // namespace arabic
 
 namespace {
 
@@ -91,6 +148,7 @@ std::string host_path(const std::string& guest) {
 }
 
 std::string host_path_exact(const std::string& guest) {
+    if (std::string o = arabic::redirect(guest); !o.empty()) return o;  // the translation
     std::string p = guest;
     auto map = [&](const char* prefix, const std::string& root) -> bool {
         size_t n = strlen(prefix);
